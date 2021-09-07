@@ -28,4 +28,3 @@ async def pause(sid, data):
     print("Pausing", data['ip'])
     return {"ip": data['ip'], "result": "success"}
 
-
