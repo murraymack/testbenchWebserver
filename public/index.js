@@ -19,7 +19,7 @@ sio.on("disconnect", () => {
     console.log("disconnected");
 });
 
-sio.on("graph_data", (data, cb) => {
+sio.on("miner_data", (data, cb) => {
     console.log(data);
     cb("graph data received");
 });
