@@ -1,6 +1,5 @@
 import asyncio
 import json
-from datetime import datetime
 
 
 class MinerList:
@@ -12,12 +11,10 @@ class MinerList:
             self.miners.append(item)
 
     async def run(self):
-        while True:
-            miner_data = []
-            for miner in self.miners:
-                miner_data.append(await miner.get_api_data())
-            await asyncio.sleep(5)
-
+        miner_data = []
+        for miner in self.miners:
+            miner_data.append(await miner.get_api_data())
+        return miner_data
 
 
 class BOSminer:
@@ -66,7 +63,8 @@ class BOSminer:
         hr_data = {}
         for board in range(len(devs_raw['DEVS'])):
             hr_data[f"board_{devs_raw['DEVS'][board]['ID']}"] = {}
-            hr_data[f"board_{devs_raw['DEVS'][board]['ID']}"]["HR"] = round(devs_raw['DEVS'][board]['MHS 5s']/1000000, 2)
+            hr_data[f"board_{devs_raw['DEVS'][board]['ID']}"]["HR"] = round(devs_raw['DEVS'][board]['MHS 5s'] / 1000000,
+                                                                            2)
 
         fans_data = {}
         for fan in range(len(fans_raw['FANS'])):
@@ -79,7 +77,8 @@ class BOSminer:
         return miner_data
 
 
-miner_list = MinerList(BOSminer("172.16.1.99"), BOSminer("172.16.1.98"))
+if __name__ == '__main__':
+    miner_list = MinerList(BOSminer("172.16.1.99"), BOSminer("172.16.1.98"))
 
-asyncio.get_event_loop().run_until_complete(miner_list.run())
-asyncio.get_event_loop().run_forever()
+    asyncio.get_event_loop().run_until_complete(miner_list.run())
+    asyncio.get_event_loop().run_forever()
