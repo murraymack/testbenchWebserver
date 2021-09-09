@@ -48,43 +48,42 @@ class BOSminer:
     async def get_api_data(self):
         try:
             all_data = await self.send_api_cmd("devs+temps+fans")
+            devs_raw = all_data['devs'][0]
+            temps_raw = all_data['temps'][0]
+            fans_raw = all_data['fans'][0]
+
+            temps_data = {}
+            for board in range(len(temps_raw['TEMPS'])):
+                temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"] = {}
+                temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Board"] = temps_raw['TEMPS'][board]['Board']
+                temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Chip"] = temps_raw['TEMPS'][board]['Chip']
+
+            for board in temps_data.keys():
+                if "Board Temp" not in temps_data[board].keys():
+                    temps_data[board]["Board"] = 0
+                if "Chip Temp" not in temps_data[board].keys():
+                    temps_data[board]["Chip"] = 0
+
+            hr_data = {}
+            for board in range(len(devs_raw['DEVS'])):
+                hr_data[f"board_{devs_raw['DEVS'][board]['ID']}"] = {}
+                hr_data[f"board_{devs_raw['DEVS'][board]['ID']}"]["HR"] = round(devs_raw['DEVS'][board]['MHS 5s'] / 1000000,
+                                                                                2)
+
+            fans_data = {}
+            for fan in range(len(fans_raw['FANS'])):
+                fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"] = {}
+                fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"]['RPM'] = fans_raw['FANS'][fan]['RPM']
+
+            miner_data = {'IP': self.ip, 'Fans': fans_data, 'HR': hr_data, 'Temps': temps_data}
+
+            self.stats = miner_data
+            return miner_data
         except:
-            return {'IP': self.ip, 'Fans': {"fan_0": 0, "fan_1": 0}, 'HR': {"board_6": {"HR": 0}, "board_7": {"HR": 0}, "board_8": {"HR": 0}}, 'Temps': {'board_6': {'Board': 0, 'Chip': 0}, 'board_7': {'Board': 0, 'Chip': 0}, 'board_8': {'Board': 0, 'Chip': 0},}}
-        devs_raw = all_data['devs'][0]
-        temps_raw = all_data['temps'][0]
-        fans_raw = all_data['fans'][0]
-
-        temps_data = {}
-        for board in range(len(temps_raw['TEMPS'])):
-            temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"] = {}
-            temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Board"] = temps_raw['TEMPS'][board]['Board']
-            temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Chip"] = temps_raw['TEMPS'][board]['Chip']
-
-        for board in temps_data.keys():
-            if "Board Temp" not in temps_data[board].keys():
-                temps_data[board]["Board"] = 0
-            if "Chip Temp" not in temps_data[board].keys():
-                temps_data[board]["Chip"] = 0
-
-        hr_data = {}
-        for board in range(len(devs_raw['DEVS'])):
-            hr_data[f"board_{devs_raw['DEVS'][board]['ID']}"] = {}
-            hr_data[f"board_{devs_raw['DEVS'][board]['ID']}"]["HR"] = round(devs_raw['DEVS'][board]['MHS 5s'] / 1000000,
-                                                                            2)
-
-        fans_data = {}
-        for fan in range(len(fans_raw['FANS'])):
-            fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"] = {}
-            fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"]['RPM'] = fans_raw['FANS'][fan]['RPM']
-
-        miner_data = {'IP': self.ip, 'Fans': fans_data, 'HR': hr_data, 'Temps': temps_data}
-
-        self.stats = miner_data
-        return miner_data
+            return {'IP': self.ip, 'Fans': {"fan_0": {"RPM": 0}, "fan_1": {"RPM": 0}}, 'HR': {"board_6": {"HR": 0}, "board_7": {"HR": 0}, "board_8": {"HR": 0}}, 'Temps': {'board_6': {'Board': 0, 'Chip': 0}, 'board_7': {'Board': 0, 'Chip': 0}, 'board_8': {'Board': 0, 'Chip': 0}}}
 
 
 if __name__ == '__main__':
     miner_list = MinerList(BOSminer("172.16.1.99"), BOSminer("172.16.1.98"))
-
     asyncio.get_event_loop().run_until_complete(miner_list.run())
     asyncio.get_event_loop().run_forever()
