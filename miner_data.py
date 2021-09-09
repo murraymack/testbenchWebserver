@@ -13,8 +13,9 @@ class MinerList:
 
     async def run(self):
         while True:
+            miner_data = []
             for miner in self.miners:
-                print(await miner.get_api_data())
+                miner_data.append(await miner.get_api_data())
             await asyncio.sleep(5)
 
 

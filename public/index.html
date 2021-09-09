@@ -5,58 +5,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.5.1/chart.min.js" integrity="sha512-Wt1bJGtlnMtGP0dqNFH1xlkLBNpEodaiQ8ZN5JLA5wpc1sUlk/O5uuOMNgvzddzkpvZ9GLyYNa8w2s7rqiTk5Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <script>
-        var data = {"miners" : [{'IP': '172.16.1.99', 'Fans': {'fan_0': {'RPM': 1020}, 'fan_1': {'RPM': 720}, 'fan_2': {'RPM': 0}, 'fan_3': {'RPM': 0}}, 'HR': {'board_6': {'HR': 1.16}}, 'Temps': {'board_6': {'Board': 0, 'Chip': 0}}}, {'IP': '172.16.1.98', 'Fans': {'fan_0': {'RPM': 4320}, 'fan_1': {'RPM': 5700}, 'fan_2': {'RPM': 0}, 'fan_3': {'RPM': 0}}, 'HR': {'board_8': {'HR': 0.0}}, 'Temps': {}}]}
-        var data_ex = {
-            "miners" : [
-                {
-                    "IP": "172.16.1.99",
-                    "Fans": {
-                        "fan_0": {
-                            "RPM": 1440,
-                            "Speed": 4
-                        },
-                        "fan_1": {
-                            "RPM": 900,
-                            "Speed": 4
-                        },
-                        "fan_2": {
-                            "RPM": 0,
-                            "Speed": 4
-                        },
-                        "fan_3": {
-                            "RPM": 0,
-                            "Speed": 4
-                        }
-                    },
-                    "HR": {
-                        "board_6": {
-                            "HR": 4.8
-                        },
-                        "board_7": {
-                            "HR": 4.2
-                        },
-                        "board_8": {
-                            "HR": 3.9
-                        }
-                    },
-                    "Temps": {
-                        "board_6": {
-                            "Board": 83.1875,
-                            "Chip": 88.875
-                        },
-                        "board_7": {
-                            "Board": 81.1875,
-                            "Chip": 90.875
-                        },
-                        "board_8": {
-                            "Board": 85.1875,
-                            "Chip": 85.875
-                        },
-                    }
-                },
-            ]
-        }
-
+        var data = {"miners" : [{'IP': '172.16.1.99', 'Fans': {'fan_0': {'RPM': 1020}, 'fan_1': {'RPM': 720}, 'fan_2': {'RPM': 0}, 'fan_3': {'RPM': 0}}, 'HR': {'board_6': {'HR': 1.16}}, 'Temps': {'board_6': {'Board': 0, 'Chip': 0}}}, {'IP': '172.16.1.98', 'Fans': {'fan_0': {'RPM': 4320}, 'fan_1': {'RPM': 5700}, 'fan_2': {'RPM': 0}, 'fan_3': {'RPM': 0}}, 'HR': {'board_8': {'HR': 0.0}}, 'Temps': {}}]};
         var options_hr = {
             responsive: true,
             //maintainAspectRatio: false,
@@ -94,11 +43,14 @@
             //maintainAspectRatio: false,
             aspectRatio: .75,
         };
+
         var options_fans = {
+            aspectRatio: 1.5,
+            events: [],
             responsive: true,
             plugins: {
                 legend: {
-                    display: true,
+                    display: false,
                 }
             }
         };
@@ -116,34 +68,50 @@
     <title>Title</title>
 </head>
 <body>
-    <div class="py-5">
+    <div class="py-2">
         <div class="container">
-            <div id="chart_container" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+            <div id="chart_container" class="row row-cols-1 row-cols-sm-2 row-cols-md-3">
                 <script>
                     function generate_graphs(data_graph) {
                         data_graph.miners.forEach(function(miner) {
+                            var fan_rpm_1 = miner.Fans.fan_0.RPM;
+                            var fan_rpm_2 = miner.Fans.fan_1.RPM;
                             var hr_canvas = document.createElement('canvas');
                             var temp_canvas = document.createElement('canvas');
+                            var fan_1_title = document.createElement('p');
+                            var fan_2_title = document.createElement('p');
+                            fan_1_title.innerHTML += "Fan 1: " + fan_rpm_1 + " RPM";
+                            fan_1_title.className = "text-center"
+                            fan_2_title.innerHTML += "Fan 2: " + fan_rpm_2 + " RPM";
+                            fan_2_title.className = "text-center"
                             var fan_1_canvas = document.createElement('canvas');
                             var fan_2_canvas = document.createElement('canvas');
                             var column = document.createElement('div');
-                            column.className = "col"
+                            column.className = "col border border-dark p-3"
                             var row_1 = document.createElement('div');
                             row_1.className = "row"
+                            var row_fan_title = document.createElement('div');
+                            row_fan_title.className = "row"
                             var row_2 = document.createElement('div');
                             row_2.className = "row"
                             var container_col_hr = document.createElement('div');
                             var container_col_temp = document.createElement('div');
+                            var container_col_title_fan_1 = document.createElement('div');
+                            var container_col_title_fan_2 = document.createElement('div');
                             var container_col_fan_1 = document.createElement('div');
                             var container_col_fan_2 = document.createElement('div');
-                            container_col_hr.className = "col w-50"
-                            container_col_temp.className = "col w-50"
-                            container_col_fan_1.className = "col w-50"
-                            container_col_fan_2.className = "col w-50"
+                            container_col_hr.className = "col w-50 ps-0 pe-4"
+                            container_col_temp.className = "col w-50 ps-0 pe-4"
+                            container_col_title_fan_1.className = "col"
+                            container_col_title_fan_2.className = "col"
+                            container_col_fan_1.className = "col w-50 ps-3 pe-1"
+                            container_col_fan_2.className = "col w-50 ps-3 pe-1"
 
 
                             container_col_hr.append(hr_canvas)
                             container_col_temp.append(temp_canvas)
+                            container_col_title_fan_1.append(fan_1_title)
+                            container_col_title_fan_2.append(fan_2_title)
                             container_col_fan_1.append(fan_1_canvas)
                             container_col_fan_2.append(fan_2_canvas)
 
@@ -158,6 +126,11 @@
                             row_1.append(container_col_hr)
                             row_1.append(container_col_temp)
                             column.append(row_1)
+
+                            row_fan_title.append(container_col_title_fan_1)
+                            row_fan_title.append(container_col_title_fan_2)
+                            column.append(row_fan_title)
+
                             row_2.append(container_col_fan_1)
                             row_2.append(container_col_fan_2)
                             column.append(row_2)
@@ -210,7 +183,6 @@
 
 
 
-                            var fan_rpm_1 = miner.Fans.fan_0.RPM;
                             var fan_data_1 = [fan_rpm_1, (6000-fan_rpm_1)];
 
                             var chart_fan_1 = new Chart(fan_1_canvas, {
@@ -231,7 +203,6 @@
                             });
 
 
-                            var fan_rpm_2 = miner.Fans.fan_1.RPM;
                             var fan_data_2 = [fan_rpm_2, (6000-fan_rpm_2)];
                             var chart_fan_2 = new Chart(fan_2_canvas, {
                                 type: "doughnut",
