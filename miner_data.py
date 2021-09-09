@@ -24,26 +24,32 @@ class BOSminer:
         self.api_port = 4028
 
     async def send_api_cmd(self, command):
-        reader, writer = await asyncio.open_connection(self.ip, self.api_port)
-        api_command = json.dumps({"command": command}).encode('utf-8')
-        writer.write(api_command)
-        await writer.drain()
+        try:
+            reader, writer = await asyncio.open_connection(self.ip, self.api_port)
+            api_command = json.dumps({"command": command}).encode('utf-8')
+            writer.write(api_command)
+            await writer.drain()
 
-        data = b""
-        while True:
-            d = await reader.read(4096)
-            if not d:
-                break
-            data += d
-        data = json.loads(data.decode('utf-8')[:-1])
+            data = b""
+            while True:
+                d = await reader.read(4096)
+                if not d:
+                    break
+                data += d
+            data = json.loads(data.decode('utf-8')[:-1])
 
-        writer.close()
-        await writer.wait_closed()
+            writer.close()
+            await writer.wait_closed()
 
-        return data
+            return data
+        except:
+            return None
 
     async def get_api_data(self):
-        all_data = await self.send_api_cmd("devs+temps+fans")
+        try:
+            all_data = await self.send_api_cmd("devs+temps+fans")
+        except:
+            return {'IP': self.ip, 'Fans': {"fan_0": 0, "fan_1": 0}, 'HR': {"board_6": {"HR": 0}, "board_7": {"HR": 0}, "board_8": {"HR": 0}}, 'Temps': {'board_6': {'Board': 0, 'Chip': 0}, 'board_7': {'Board': 0, 'Chip': 0}, 'board_8': {'Board': 0, 'Chip': 0},}}
         devs_raw = all_data['devs'][0]
         temps_raw = all_data['temps'][0]
         fans_raw = all_data['fans'][0]
