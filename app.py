@@ -20,7 +20,6 @@ async def run():
     while True:
         miner_list = MinerList(BOSminer("172.16.1.98"), BOSminer("172.16.1.99"))
         miner_data = await miner_list.run()
-        print(miner_data)
         sio.start_background_task(send_data, {"miners": miner_data})
         await sio.sleep(5)
 
