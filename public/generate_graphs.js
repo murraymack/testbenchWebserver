@@ -2,7 +2,7 @@ import { options_hr, options_temp, options_fans } from "./graph_options.js";
 import { sio } from "./sio.js"
 
 function pauseMiner(ip) {
-    console.log("Pause" + ip)
+    sio.emit("pause", ip)
 }
 
 function lightMiner(ip) {

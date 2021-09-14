@@ -4,16 +4,18 @@ import json
 
 class MinerList:
     def __init__(self, *items):
-        self.miners = [item for item in items]
+        self.miners = {}
+        for item in items:
+            self.miners[item.ip] = item
 
     def append(self, *items):
         for item in items:
-            self.miners.append(item)
+            self.miners[item.ip] = item
 
     async def run(self):
         miner_data = []
         for miner in self.miners:
-            miner_data.append(await miner.get_api_data())
+            miner_data.append(await self.miners[miner].get_api_data())
         return miner_data
 
 
