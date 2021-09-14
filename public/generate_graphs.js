@@ -1,4 +1,13 @@
 import { options_hr, options_temp, options_fans } from "./graph_options.js";
+import { sio } from "./sio.js"
+
+function pauseMiner(ip) {
+    console.log("Pause" + ip)
+}
+
+function lightMiner(ip) {
+    sio.emit("light", ip)
+}
 
 export function generate_graphs(data_graph) {
     var container_all = document.getElementById('chart_container');
@@ -26,6 +35,30 @@ export function generate_graphs(data_graph) {
         row_fan_title.className = "row"
         var row_2 = document.createElement('div');
         row_2.className = "row"
+        var row_3 = document.createElement('div');
+        row_3.className = "row"
+        var container_pause = document.createElement('div');
+        container_pause.className = "form-check form-switch d-flex justify-content-evenly"
+        var pause_switch = document.createElement('input');
+        pause_switch.type = "checkbox"
+        pause_switch.id = "pause_" + miner.IP
+        pause_switch.className = "form-check-input"
+        pause_switch.addEventListener("click", function(){pauseMiner(miner.IP);}, false);
+        var label_pause = document.createElement("label");
+        label_pause.setAttribute("for", "pause_" + miner.IP);
+        label_pause.innerHTML = "Pause";
+        var container_light = document.createElement('div');
+        container_light.className = "form-check form-switch d-flex justify-content-evenly"
+        var light_switch = document.createElement('input');
+        light_switch.type = "checkbox"
+        light_switch.id = "light_" + miner.IP
+        light_switch.className = "form-check-input"
+        light_switch.addEventListener("click", function(){lightMiner(miner.IP);}, false);
+        var label_light = document.createElement("label");
+        label_light.setAttribute("for", "light_" + miner.IP);
+        label_light.innerHTML = "Light";
+
+
         var container_col_hr = document.createElement('div');
         var container_col_temp = document.createElement('div');
         var container_col_title_fan_1 = document.createElement('div');
@@ -46,13 +79,16 @@ export function generate_graphs(data_graph) {
         container_col_title_fan_2.append(fan_2_title)
         container_col_fan_1.append(fan_1_canvas)
         container_col_fan_2.append(fan_2_canvas)
+        container_light.append(light_switch)
+        container_light.append(label_light)
+        container_pause.append(pause_switch)
+        container_pause.append(label_pause)
 
 
         var header = document.createElement('h3');
         header.className = "text-center"
         header.innerHTML += miner.IP
         column.append(header)
-
 
 
         row_1.append(container_col_hr)
@@ -66,6 +102,10 @@ export function generate_graphs(data_graph) {
         row_2.append(container_col_fan_1)
         row_2.append(container_col_fan_2)
         column.append(row_2)
+
+        row_3.append(container_light)
+        row_3.append(container_pause)
+        column.append(row_3)
 
         container_all.append(column);
 
