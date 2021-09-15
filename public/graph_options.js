@@ -1,6 +1,7 @@
+// All options for creation of graphs in ./generate_graphs.js
+
 export var options_hr = {
     responsive: true,
-    //maintainAspectRatio: false,
     aspectRatio: .75,
     plugins: {
         legend: {
@@ -33,7 +34,6 @@ export var options_temp = {
             display: false,
         }
     },
-    //maintainAspectRatio: false,
     aspectRatio: .75,
 };
 

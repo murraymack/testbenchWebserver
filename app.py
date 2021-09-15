@@ -3,8 +3,11 @@ import json
 from miner_data import MinerList, BOSminer
 import uvicorn
 
-miner_data = None
+
+miner_list = MinerList(BOSminer("172.16.1.98"), BOSminer("172.16.1.99"))
+miner_data = miner_list.basic_data()
 running = True
+
 
 sio = socketio.AsyncServer(async_mode="asgi")
 app = socketio.ASGIApp(sio, static_files={
@@ -13,15 +16,18 @@ app = socketio.ASGIApp(sio, static_files={
 
 
 async def cb(data):
+    """Callback to print data from client"""
     print(data)
 
 
 async def send_data(data):
+    """Send miner data to all clients"""
     await sio.emit('miner_data', json.dumps(data), callback=cb)
 
 
 @sio.event
-async def connect(sid, environ):
+async def connect(sid, environ) -> None:
+    """Event for connection"""
     global miner_data
     if miner_data is not None:
         data = {"miners": miner_data}
@@ -29,19 +35,49 @@ async def connect(sid, environ):
 
 
 @sio.event
-async def pause(ip):
-    pass
+async def pause(sid, ip: str) -> None:
+    """Event to pause a miner"""
+    await miner_list.pause(ip)
 
 
-async def light(ip):
-    pass
+@sio.event
+async def unpause(sid, ip: str) -> None:
+    """Event to unpause a miner"""
+    await miner_list.unpause(ip)
 
 
-async def run():
+@sio.event
+async def check_pause(sid, ip: str) -> bool:
+    """Event to check if a miner is paused"""
+    result = await miner_list.check_pause(ip)
+    return result
+
+
+@sio.event
+async def light(sid, ip: str) -> None:
+    """Event to turn on the fault light of a miner"""
+    await miner_list.light(ip)
+
+
+@sio.event
+async def unlight(sid, ip: str) -> None:
+    """Event to turn off the fault light of a miner"""
+    await miner_list.unlight(ip)
+
+
+@sio.event
+async def check_light(sid, ip: str) -> bool:
+    """Event to check if a fault light on a miner is on"""
+    result = await miner_list.check_light(ip)
+    return result
+
+
+async def run() -> None:
+    """Run loop for getting miner data"""
     global running
     while running:
         global miner_data
-        miner_list = MinerList(BOSminer("172.16.1.98"), BOSminer("172.16.1.99"))
+        global miner_list
         miner_data = await miner_list.run()
         sio.start_background_task(send_data, {"miners": miner_data})
         await sio.sleep(5)
@@ -50,4 +86,4 @@ async def run():
 sio.start_background_task(run)
 
 if __name__ == '__main__':
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, log_level="info")
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, log_level="info", reload=True)
