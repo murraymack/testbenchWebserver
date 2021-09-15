@@ -57,7 +57,6 @@ export function generate_graphs(miner, hr_canvas, temp_canvas, fan_1_canvas, fan
             temps_data.push({label: board_num + " Board", data: [miner.Temps[key].Board], backgroundColor: ["rgba(255, 15, 58, 1)"]});
         }
     }
-    console.log(temps_data)
 
 
     var chart_temp = new Chart(temp_canvas, {

@@ -55,8 +55,9 @@ export function generate_layout(data_graph) {
         column.className = "col border border-dark p-3"
 
         // create IP address header
-        var header = document.createElement('h3');
-        header.className = "text-center"
+        var header = document.createElement('button');
+        header.className = "text-center btn btn-primary w-100"
+        header.onclick = function(){window.open("http://" + miner.IP, '_blank');}
         header.innerHTML += miner.IP
 
         // add the header to col first
