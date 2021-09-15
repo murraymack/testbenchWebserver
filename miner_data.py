@@ -129,9 +129,9 @@ class BOSminer:
 
             # parse individual board and chip temperature data
             for board in temps_data.keys():
-                if "Board Temp" not in temps_data[board].keys():
+                if "Board" not in temps_data[board].keys():
                     temps_data[board]["Board"] = 0
-                if "Chip Temp" not in temps_data[board].keys():
+                if "Chip" not in temps_data[board].keys():
                     temps_data[board]["Chip"] = 0
 
             # parse hashrate data
@@ -166,7 +166,7 @@ class BOSminer:
 
 
 class MinerList:
-    def __init__(self, *items: list[BOSminer]):
+    def __init__(self, *items: BOSminer):
         self.miners = {}
         for item in items:
             self.miners[item.ip] = item
@@ -215,17 +215,17 @@ class MinerList:
         miner = self.miners[ip]
         return miner.lit
 
-    def append(self, *items: list[BOSminer]) -> None:
+    def append(self, *items: BOSminer) -> None:
         """Add a miner to MinerList"""
         for item in items:
             self.miners[item.ip] = item
 
-    async def run(self) -> list[dict]:
+    async def get_data(self) -> list[dict]:
         """Run loop to get data from all miners"""
-        miner_data = []
-        for miner in self.miners:
-            miner_data.append(await self.miners[miner].get_api_data())
-        return miner_data
+        tasks = [self.miners[miner].get_api_data() for miner in self.miners]
+        results = await asyncio.gather(*tasks)
+        return results
+
 
 
 if __name__ == '__main__':

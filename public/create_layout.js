@@ -124,12 +124,12 @@ export function generate_layout(data_graph) {
 
             // create fan 1 title
             var fan_1_title = document.createElement('p');
-            fan_1_title.innerHTML += "Fan 1: " + fan_rpm_1 + " RPM";
+            fan_1_title.innerHTML += "Fan L: " + fan_rpm_1 + " RPM";
             fan_1_title.className = "text-center"
 
             // create fan 2 title
             var fan_2_title = document.createElement('p');
-            fan_2_title.innerHTML += "Fan 2: " + fan_rpm_2 + " RPM";
+            fan_2_title.innerHTML += "Fan R: " + fan_rpm_2 + " RPM";
             fan_2_title.className = "text-center"
 
             // create fan 1 canvas
@@ -198,7 +198,7 @@ export function generate_layout(data_graph) {
 
             // create a row for buttons
             var row_buttons = document.createElement('div');
-            row_buttons.className = "row"
+            row_buttons.className = "row mt-3"
             if (miner.Light == "show") {
                 // create light button container
                 var container_light = document.createElement('div');

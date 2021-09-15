@@ -4,7 +4,14 @@ from miner_data import MinerList, BOSminer
 import uvicorn
 
 
-miner_list = MinerList(BOSminer("172.16.1.98"), BOSminer("172.16.1.99"))
+miner_list = MinerList(BOSminer("192.168.1.11"),
+                       BOSminer("192.168.1.12"),
+                       BOSminer("192.168.1.13"),
+                       BOSminer("192.168.1.14"),
+                       BOSminer("192.168.1.15"),
+                       BOSminer("192.168.1.16"),
+                       BOSminer("192.168.1.17"),
+                       BOSminer("192.168.1.18"))
 miner_data = miner_list.basic_data()
 running = True
 
@@ -78,7 +85,7 @@ async def run() -> None:
     while running:
         global miner_data
         global miner_list
-        miner_data = await miner_list.run()
+        miner_data = await miner_list.get_data()
         sio.start_background_task(send_data, {"miners": miner_data})
         await sio.sleep(5)
 

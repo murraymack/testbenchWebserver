@@ -10,15 +10,16 @@ export var options_hr = {
     },
     scales: {
         y: {
+            ticks: { stepSize: .6 },
             min: 0,
-            suggestedMax: 6,
+            suggestedMax: 3.6,
             grid: {
                 color: function(context) {
-                    if (context.tick.value == 4) {
+                    if (context.tick.value == 2.4) {
                         return "rgba(0, 0, 0, 1)";
-                    } else if (context.tick.value > 4) {
+                    } else if (context.tick.value > 2.4) {
                         return "rgba(103, 221, 0, 1)";
-                    } else if (context.tick.value < 4) {
+                    } else if (context.tick.value < 2.4) {
                         return "rgba(221, 0, 103, 1)";
                     }
                 }
