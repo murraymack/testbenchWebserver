@@ -199,32 +199,33 @@ export function generate_layout(data_graph) {
             // create a row for buttons
             var row_buttons = document.createElement('div');
             row_buttons.className = "row"
+            if (miner.Light == "show") {
+                // create light button container
+                var container_light = document.createElement('div');
+                container_light.className = "form-check form-switch d-flex justify-content-evenly"
 
-            // create light button container
-            var container_light = document.createElement('div');
-            container_light.className = "form-check form-switch d-flex justify-content-evenly"
+                // create light button
+                var light_switch = document.createElement('input');
+                light_switch.type = "checkbox"
+                light_switch.id = "light_" + miner.IP
+                light_switch.className = "form-check-input"
 
-            // create light button
-            var light_switch = document.createElement('input');
-            light_switch.type = "checkbox"
-            light_switch.id = "light_" + miner.IP
-            light_switch.className = "form-check-input"
+                // check if the light is turned on and add click listener
+                checkLight(miner.IP, light_switch);
+                light_switch.addEventListener("click", function(){lightMiner(miner.IP, light_switch);}, false);
 
-            // check if the light is turned on and add click listener
-            checkLight(miner.IP, light_switch);
-            light_switch.addEventListener("click", function(){lightMiner(miner.IP, light_switch);}, false);
+                // add a light label to the button
+                var label_light = document.createElement("label");
+                label_light.setAttribute("for", "light_" + miner.IP);
+                label_light.innerHTML = "Light";
 
-            // add a light label to the button
-            var label_light = document.createElement("label");
-            label_light.setAttribute("for", "light_" + miner.IP);
-            label_light.innerHTML = "Light";
+                // add the button and label to the container
+                container_light.append(light_switch)
+                container_light.append(label_light)
 
-            // add the button and label to the container
-            container_light.append(light_switch)
-            container_light.append(label_light)
-
-            // add the container to the row
-            row_buttons.append(container_light)
+                // add the container to the row
+                row_buttons.append(container_light)
+            }
 
             // add the row to the main column
             column.append(row_buttons)

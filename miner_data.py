@@ -1,5 +1,6 @@
 import asyncio
 import json
+import asyncssh
 
 
 class BOSminer:
@@ -7,8 +8,10 @@ class BOSminer:
         self.stats = None
         self.ip = ip
         self.api_port = 4028
-        self.paused = False
+        self.running = asyncio.Event()
+        self.running.set()
         self.lit = False
+        self.conn = None
 
     async def send_api_cmd(self, command: str) -> dict or None:
         """Send a command to the API of the miner"""
@@ -48,23 +51,65 @@ class BOSminer:
 
     async def pause(self) -> None:
         """Pause the miner"""
-        self.paused = True
+        self.running.clear()
         print("paused" + self.ip)
 
     async def unpause(self) -> None:
         """Unpause the miner"""
-        self.paused = False
+        self.running.set()
         print("unpaused" + self.ip)
 
     async def light(self) -> None:
         """Turn on the fault light"""
         self.lit = True
-        print("light" + self.ip)
+        await self.run_command("miner fault_light on")
+        print("light " + self.ip)
 
     async def unlight(self) -> None:
         """Turn off the fault light"""
         self.lit = False
+        await self.run_command("miner fault_light off")
         print("unlight" + self.ip)
+
+    def add_to_output(self, message: str) -> None:
+        print(message)
+
+    async def get_connection(self, username: str, password: str) -> asyncssh.connect:
+        """
+        Create a new asyncssh connection and save it
+        """
+        if self.conn is None:
+            # if connection doesnt exist, create it
+            conn = await asyncssh.connect(self.ip, known_hosts=None, username=username, password=password,
+                                          server_host_key_algs=['ssh-rsa'])
+            # return created connection
+            self.conn = conn
+        else:
+            # if connection exists, return the connection
+            conn = self.conn
+        return conn
+
+    async def run_command(self, cmd: str) -> None:
+        """Run a command on the miner"""
+        # pause logic
+        if not self.running.is_set():
+            self.add_to_output("Paused...")
+        await self.running.wait()
+
+        # get/create ssh connection to miner
+        conn = await self.get_connection("root", "admin")
+        # send the command and store the result
+        try:
+            result = await conn.run(cmd)
+        except:
+            result = await conn.run(cmd)
+        # let the user know the result of the command
+        if result.stdout != "":
+            self.add_to_output(result.stdout)
+        elif result.stderr != "":
+            self.add_to_output("ERROR: " + result.stderr)
+        else:
+            self.add_to_output(cmd)
 
     async def get_api_data(self) -> dict:
         """Get and parse API data for the client"""
@@ -104,7 +149,7 @@ class BOSminer:
                 fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"]['RPM'] = fans_raw['FANS'][fan]['RPM']
 
             # set the miner data
-            miner_data = {'IP': self.ip, 'Fans': fans_data, 'HR': hr_data, 'Temps': temps_data}
+            miner_data = {'IP': self.ip, "Light": "show", 'Fans': fans_data, 'HR': hr_data, 'Temps': temps_data}
 
             # save stats for later
             self.stats = miner_data
@@ -114,7 +159,7 @@ class BOSminer:
         except:
             # if it fails, return fake data
             # usually fails on getting None from API
-            return {'IP': self.ip, 'Fans': {"fan_0": {"RPM": 0}, "fan_1": {"RPM": 0}},
+            return {'IP': self.ip, 'Light': 'hide', 'Fans': {"fan_0": {"RPM": 0}, "fan_1": {"RPM": 0}},
                     'HR': {"board_6": {"HR": 0}, "board_7": {"HR": 0}, "board_8": {"HR": 0}},
                     'Temps': {'board_6': {'Board': 0, 'Chip': 0}, 'board_7': {'Board': 0, 'Chip': 0},
                               'board_8': {'Board': 0, 'Chip': 0}}}
@@ -131,6 +176,7 @@ class MinerList:
         miner_data = []
         for miner in self.miners:
             miner_data.append({'IP': miner,
+                               'Light': "hide",
                                'Fans': {"fan_0": {"RPM": 0}, "fan_1": {"RPM": 0}},
                                'HR': {"board_6": {"HR": 0}, "board_7": {"HR": 0}, "board_8": {"HR": 0}},
                                'Temps': {
@@ -150,9 +196,9 @@ class MinerList:
         await miner.unpause()
 
     async def check_pause(self, ip: str) -> bool:
-        """CHeck if a miner is paused"""
+        """Check if a miner is paused"""
         miner = self.miners[ip]
-        return miner.paused
+        return not miner.running.is_set()
 
     async def light(self, ip: str) -> None:
         """Turn fault light on for a miner"""
