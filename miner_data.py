@@ -294,6 +294,7 @@ class BOSminer:
                 return self.messages
         else:
             self.add_to_output("Down...")
+            self.lit = False
             return self.messages
 
     async def send_dir(self, l_dir: str, r_dest: str) -> None:
