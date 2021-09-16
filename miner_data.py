@@ -244,7 +244,7 @@ class BOSminer:
 
     async def get_api_data(self) -> dict:
         """Get and parse API data for the client"""
-        if self.ping_http():
+        if await self.ping_http():
             try:
                 # get all data and split it up
                 all_data = await self.send_api_cmd("devs+temps+fans")
