@@ -1,5 +1,6 @@
 import socketio
 import json
+import asyncio
 from miner_data import MinerList, BOSminer
 import uvicorn
 
@@ -84,10 +85,11 @@ async def check_light(sid, ip: str) -> bool:
 
 async def run() -> None:
     """Run loop for getting miner data"""
+    global miner_list
     global running
+    asyncio.create_task(miner_list.install())
     while running:
         global miner_data
-        global miner_list
         miner_data = await miner_list.get_data()
         sio.start_background_task(send_data, {"miners": miner_data})
         await sio.sleep(5)

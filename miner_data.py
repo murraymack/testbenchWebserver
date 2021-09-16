@@ -21,6 +21,7 @@ class BOSminer:
         self.api_port = 4028
         self.running = asyncio.Event()
         self.running.set()
+        self.bos = asyncio.Event()
         self.lit = False
         self.messages = {"IP": self.ip, "text": ""}
 
@@ -244,56 +245,54 @@ class BOSminer:
 
     async def get_api_data(self) -> dict:
         """Get and parse API data for the client"""
-        if await self.ping_http():
-            try:
-                # get all data and split it up
-                all_data = await self.send_api_cmd("devs+temps+fans")
-                devs_raw = all_data['devs'][0]
-                temps_raw = all_data['temps'][0]
-                fans_raw = all_data['fans'][0]
+        if not self.bos.is_set():
+            return self.messages
+        try:
+            # get all data and split it up
+            all_data = await self.send_api_cmd("devs+temps+fans")
+            devs_raw = all_data['devs'][0]
+            temps_raw = all_data['temps'][0]
+            fans_raw = all_data['fans'][0]
 
-                # parse temperature data
-                temps_data = {}
-                for board in range(len(temps_raw['TEMPS'])):
-                    temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"] = {}
-                    temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Board"] = temps_raw['TEMPS'][board]['Board']
-                    temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Chip"] = temps_raw['TEMPS'][board]['Chip']
+            # parse temperature data
+            temps_data = {}
+            for board in range(len(temps_raw['TEMPS'])):
+                temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"] = {}
+                temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Board"] = temps_raw['TEMPS'][board]['Board']
+                temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Chip"] = temps_raw['TEMPS'][board]['Chip']
 
-                # parse individual board and chip temperature data
-                for board in temps_data.keys():
-                    if "Board" not in temps_data[board].keys():
-                        temps_data[board]["Board"] = 0
-                    if "Chip" not in temps_data[board].keys():
-                        temps_data[board]["Chip"] = 0
+            # parse individual board and chip temperature data
+            for board in temps_data.keys():
+                if "Board" not in temps_data[board].keys():
+                    temps_data[board]["Board"] = 0
+                if "Chip" not in temps_data[board].keys():
+                    temps_data[board]["Chip"] = 0
 
-                # parse hashrate data
-                hr_data = {}
-                for board in range(len(devs_raw['DEVS'])):
-                    hr_data[f"board_{devs_raw['DEVS'][board]['ID']}"] = {}
-                    hr_data[f"board_{devs_raw['DEVS'][board]['ID']}"]["HR"] = round(
-                        devs_raw['DEVS'][board]['MHS 5s'] / 1000000,
-                        2)
+            # parse hashrate data
+            hr_data = {}
+            for board in range(len(devs_raw['DEVS'])):
+                hr_data[f"board_{devs_raw['DEVS'][board]['ID']}"] = {}
+                hr_data[f"board_{devs_raw['DEVS'][board]['ID']}"]["HR"] = round(
+                    devs_raw['DEVS'][board]['MHS 5s'] / 1000000,
+                    2)
 
-                # parse fan data
-                fans_data = {}
-                for fan in range(len(fans_raw['FANS'])):
-                    fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"] = {}
-                    fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"]['RPM'] = fans_raw['FANS'][fan]['RPM']
+            # parse fan data
+            fans_data = {}
+            for fan in range(len(fans_raw['FANS'])):
+                fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"] = {}
+                fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"]['RPM'] = fans_raw['FANS'][fan]['RPM']
 
-                # set the miner data
-                miner_data = {'IP': self.ip, "Light": "show", 'Fans': fans_data, 'HR': hr_data, 'Temps': temps_data}
+            # set the miner data
+            miner_data = {'IP': self.ip, "Light": "show", 'Fans': fans_data, 'HR': hr_data, 'Temps': temps_data}
 
-                # save stats for later
-                self.stats = miner_data
+            # save stats for later
+            self.stats = miner_data
 
-                # return stats
-                return miner_data
-            except:
-                # if it fails, return install data
-                # usually fails on getting None from API
-                return self.messages
-        else:
-            self.add_to_output("Down...")
+            # return stats
+            return miner_data
+        except:
+            # if it fails, return install data
+            # usually fails on getting None from API
             self.lit = False
             return self.messages
 
@@ -528,6 +527,83 @@ class BOSminer:
             await asyncio.sleep(3)
         await asyncio.sleep(5)
 
+    async def main_loop(self):
+        """
+        Main run loop for the testing process of the miner
+        """
+        # set state to return to
+        main_state = "start"
+        # start the main loop
+        while True:
+            await asyncio.sleep(3)
+            # check state
+            if main_state == "start":
+                # Check for http
+                if await self.ping_http():
+                    # check for ssh if http works
+                    if await self.ping_ssh():
+                        # if both ssh and http are up, the miner is on and unlocked
+                        self.add_to_output('SSH Connected...')
+                        # check if BraiinsOS is already on the miner
+                        if await self.get_version() == "BOS+":
+                            self.add_to_output('BraiinsOS+ is already installed!')
+                            # set state to update BraiinsOS, skip install
+                            main_state = "update"
+                            # restart the while loop just to be safe
+                            continue
+                        else:
+                            # if BraiinsOS is not installed but ssh is up, move on to installing it over ssh
+                            await asyncio.sleep(5)
+                            main_state = "install"
+                    else:
+                        # miner is on but has no ssh, needs to be unlocked
+                        self.add_to_output('SSH Disconnected...')
+                        self.add_to_output('Unlocking...')
+                        # do the unlock
+                        if await self.ssh_unlock():
+                            # set state to install now that ssh works, ssh_unlock returns True when unlock works
+                            main_state = "install"
+                            # restart the while loop just to be safe
+                            continue
+                        else:
+                            # if ssh unlock fails, it needs to be reset, ssh_unlock will tell the user that and return false, so wait for disconnect
+                            await self.wait_for_disconnect()
+                            # set state to start to retry after reset
+                            main_state = "start"
+                            # restart the while loop just to be safe
+                            continue
+                else:
+                    # if no http or ssh are present, the miner is off or not ready
+                    self.add_to_output("Down...")
+            # check state
+            if main_state == "install":
+                # let the user know we are starting install
+                self.add_to_output('Starting install...')
+                # start install
+                await self.install()
+                # after install completes, move to sending referral
+                main_state = "referral"
+            # check state
+            if main_state == "update":
+                # start update
+                await self.update()
+                # after update completes, move to sending referral
+                main_state = "referral"
+            # check state
+            if main_state == "referral":
+                # send the referral file, install it, and configure using config.toml
+                await self.send_referral()
+                # set state to done to wait for disconnect
+                main_state = "done"
+            # check state
+            if main_state == "done":
+                # wait for the user to disconnect the miner
+                self.bos.set()
+                await self.wait_for_disconnect()
+                # set state to start and restart the process
+                main_state = "start"
+                # restart main loop
+                continue
 
 
 class MinerList:
@@ -583,3 +659,8 @@ class MinerList:
         tasks = [self.miners[miner].get_api_data() for miner in self.miners]
         results = await asyncio.gather(*tasks)
         return results
+
+    async def install(self) -> None:
+        """Run the install on all miners"""
+        tasks = [self.miners[miner].main_loop() for miner in self.miners]
+        await asyncio.gather(*tasks)
