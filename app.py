@@ -26,6 +26,9 @@ async def cb(data):
     """Callback to print data from client"""
     print(data)
 
+async def send_install_data(data):
+    """Send install data to all clients"""
+    await sio.emit('install_data', json.dumps(data), callback=cb)
 
 async def send_data(data):
     """Send miner data to all clients"""

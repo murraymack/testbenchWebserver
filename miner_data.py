@@ -12,6 +12,7 @@ class BOSminer:
         self.running.set()
         self.lit = False
         self.conn = None
+        self.messages = {"IP": self.ip, "text": "Init"}
 
     async def send_api_cmd(self, command: str) -> dict or None:
         """Send a command to the API of the miner"""
@@ -46,7 +47,6 @@ class BOSminer:
             return data
         except:
             # if an error happens, return none
-            # upper levels correct none to fake data
             return None
 
     async def pause(self) -> None:
@@ -72,7 +72,7 @@ class BOSminer:
         print("unlight" + self.ip)
 
     def add_to_output(self, message: str) -> None:
-        print(message)
+        self.messages[self.ip]["text"] += message
 
     async def get_connection(self, username: str, password: str) -> asyncssh.connect:
         """
@@ -157,12 +157,9 @@ class BOSminer:
             # return stats
             return miner_data
         except:
-            # if it fails, return fake data
+            # if it fails, return install data
             # usually fails on getting None from API
-            return {'IP': self.ip, 'Light': 'hide', 'Fans': {"fan_0": {"RPM": 0}, "fan_1": {"RPM": 0}},
-                    'HR': {"board_6": {"HR": 0}, "board_7": {"HR": 0}, "board_8": {"HR": 0}},
-                    'Temps': {'board_6': {'Board': 0, 'Chip': 0}, 'board_7': {'Board': 0, 'Chip': 0},
-                              'board_8': {'Board': 0, 'Chip': 0}}}
+            return self.messages
 
 
 class MinerList:

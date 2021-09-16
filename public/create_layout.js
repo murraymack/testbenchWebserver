@@ -63,22 +63,33 @@ export function generate_layout(data_graph) {
         // add the header to col first
         column.append(header)
 
-        if (miner.text) {
+        if (miner.hasOwnProperty('text')) {
             // create text row
             var row_text = document.createElement('div');
             row_text.className = "row"
 
+            // create text container
+            var text_container = document.createElement('div')
+            text_container.className = "col w-100 p-3"
+
+
             // create text area for data
             var text_area = document.createElement('textarea');
-            text_area.rows = "6"
+            text_area.rows = "10"
+            text_area.className = "form-control"
+            text_area.style = "font-size: 12px"
             text_area.disabled = true
+            text_area.readonly = true
 
             // add data to the text area
             text_area.innerHTML += miner.text + "\n"
 
+            // add the text area to the row
+            row_text.append(text_area)
+
             // create a row for buttons
             var row_buttons = document.createElement('div');
-            row_buttons.className = "row"
+            row_buttons.className = "row mt-3"
 
             // create pause button container
             var container_pause = document.createElement('div');
@@ -100,14 +111,16 @@ export function generate_layout(data_graph) {
             label_pause.innerHTML = "Pause";
 
             // add the label and button to the container
-            container_pause.append(pause_switch)
-            container_pause.append(label_pause)
+            container_pause.append(pause_switch);
+            container_pause.append(label_pause);
+            text_container.append(row_text);
 
             // add the container to the row
-            row_buttons.append(container_pause)
+            row_buttons.append(container_pause);
 
             //add the row to the main column
-            column.append(row_buttons)
+            column.append(text_container);
+            column.append(row_buttons);
 
             // add the column onto the page
             container_all.append(column);
