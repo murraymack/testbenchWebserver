@@ -22,7 +22,6 @@ class BOSminer:
         self.running = asyncio.Event()
         self.running.set()
         self.lit = False
-        self.conn = None
         self.messages = {"IP": self.ip, "text": ""}
 
     async def ping(self, port: int) -> bool:
@@ -214,17 +213,11 @@ class BOSminer:
 
     async def get_connection(self, username: str, password: str) -> asyncssh.connect:
         """
-        Create a new asyncssh connection and save it
+        Create a new asyncssh connection
         """
-        if self.conn is None:
-            # if connection doesnt exist, create it
-            conn = await asyncssh.connect(self.ip, known_hosts=None, username=username, password=password,
+        conn = await asyncssh.connect(self.ip, known_hosts=None, username=username, password=password,
                                           server_host_key_algs=['ssh-rsa'])
-            # return created connection
-            self.conn = conn
-        else:
-            # if connection exists, return the connection
-            conn = self.conn
+        # return created connection
         return conn
 
     async def run_command(self, cmd: str) -> None:
