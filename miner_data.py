@@ -513,11 +513,6 @@ class BOSminer:
 
         # run the install
         await self.run_command(f"{install_cmd} && /sbin/reboot")
-        # close ssh connection on our own, we know it will fail if not
-        if self.conn is not None:
-            self.conn.close()
-            await self.conn.wait_closed()
-            self.conn = None
         # wait 120 seconds for reboot
         self.add_to_output('Rebooting...')
         await asyncio.sleep(20)
@@ -587,10 +582,3 @@ class MinerList:
         tasks = [self.miners[miner].get_api_data() for miner in self.miners]
         results = await asyncio.gather(*tasks)
         return results
-
-
-
-if __name__ == '__main__':
-    miner_list = MinerList(BOSminer("172.16.1.99"), BOSminer("172.16.1.98"))
-    asyncio.get_event_loop().run_until_complete(miner_list.run())
-    asyncio.get_event_loop().run_forever()
