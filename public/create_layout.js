@@ -82,7 +82,9 @@ export function generate_layout(data_graph) {
             text_area.readonly = true
 
             // add data to the text area
-            text_area.innerHTML += miner.text + "\n"
+            var text = miner.text
+            text += text_area.innerHTML
+            text_area.innerHTML = text
 
             // add the text area to the row
             row_text.append(text_area)

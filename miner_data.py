@@ -210,7 +210,8 @@ class BOSminer:
         print("unlight" + self.ip)
 
     def add_to_output(self, message: str) -> None:
-        self.messages["text"] += message + "\n"
+        text = message + "\n" + self.messages["text"]
+        self.messages["text"] = text
 
     async def get_connection(self, username: str, password: str) -> asyncssh.connect:
         """
@@ -238,6 +239,8 @@ class BOSminer:
         # let the user know the result of the command
         if result.stdout != "":
             self.add_to_output(result.stdout)
+            if result.stderr != "":
+                self.add_to_output("ERROR: " + result.stderr)
         elif result.stderr != "":
             self.add_to_output("ERROR: " + result.stderr)
         else:
@@ -424,7 +427,7 @@ class BOSminer:
             # tell the user we are sending the update file
             self.add_to_output("Sending upgrade file...")
             # send the update file
-            await self.send_file(UPDATE_FILE_S9, "/tmp/firmware")
+            await self.send_file(UPDATE_FILE_S9, "/tmp/firmware.tar")
             # install the update and collect the result
             result = await conn.run(f'sysupgrade /tmp/firmware.tar')
             self.add_to_output(result.stdout.strip())
@@ -588,9 +591,11 @@ class BOSminer:
                 # start update
                 await self.update()
                 # after update completes, move to sending referral
+                await asyncio.sleep(20)
                 main_state = "referral"
             # check state
             if main_state == "referral":
+                await asyncio.sleep(5)
                 # send the referral file, install it, and configure using config.toml
                 await self.send_referral()
                 # set state to done to wait for disconnect
