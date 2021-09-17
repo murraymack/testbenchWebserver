@@ -298,7 +298,9 @@ class BOSminer:
             # if it fails, return install data
             # usually fails on getting None from API
             self.lit = False
-            return self.messages
+            data = self.messages
+            data['Light'] = "show"
+            return data
 
     async def send_dir(self, l_dir: str, r_dest: str) -> None:
         """
