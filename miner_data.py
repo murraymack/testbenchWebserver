@@ -609,6 +609,8 @@ class BOSminer:
                 await self.wait_for_disconnect()
                 # set state to start and restart the process
                 self.bos.clear()
+                if "Light" in self.messages.keys():
+                    del self.messages["Light"]
                 self.main_state = "start"
                 # restart main loop
                 continue
