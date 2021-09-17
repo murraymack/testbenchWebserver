@@ -18,11 +18,11 @@ export function generate_graphs(miner, hr_canvas, temp_canvas, fan_1_canvas, fan
 
             // set the colors to be used in the graphs (shades of blue)
             if (board_num == 6) {
-                hr_data[count].backgroundColor = ["rgba(12, 58, 242, 1)"]
+                hr_data[count].backgroundColor = ["rgba(0, 19, 97, 1)"]
             } else if (board_num == 7) {
                 hr_data[count].backgroundColor = ["rgba(0, 84, 219, 1)"]
             } else if (board_num == 8) {
-                hr_data[count].backgroundColor = ["rgba(0, 139, 245, 1)"]
+                hr_data[count].backgroundColor = ["rgba(36, 180, 224, 1)"]
             }
             count += 1
         }
@@ -72,7 +72,17 @@ export function generate_graphs(miner, hr_canvas, temp_canvas, fan_1_canvas, fan
 
     // get fan rpm
     var fan_rpm_1 = miner.Fans.fan_0.RPM;
+    if (fan_rpm_1 == 0){
+        var secondary_col_1 = "rgba(97, 4, 4, 1)"
+    } else {
+        var secondary_col_1 = "rgba(199, 199, 199, 1)"
+    }
     var fan_rpm_2 = miner.Fans.fan_1.RPM;
+    if (fan_rpm_2 == 0){
+        var secondary_col_2 = "rgba(97, 4, 4, 1)"
+    } else {
+        var secondary_col_2 = "rgba(199, 199, 199, 1)"
+    }
 
     // set the fan data to be rpm and the rest to go up to 6000
     var fan_data_1 = [fan_rpm_1, (6000-fan_rpm_1)];
@@ -89,7 +99,7 @@ export function generate_graphs(miner, hr_canvas, temp_canvas, fan_1_canvas, fan
                     // add colors
                     backgroundColor: [
                         "rgba(103, 0, 221, 1)",
-                        "rgba(199, 199, 199, 1)"
+                        secondary_col_1
                     ]
                 },
             ]
@@ -113,7 +123,7 @@ export function generate_graphs(miner, hr_canvas, temp_canvas, fan_1_canvas, fan
                     // add colors
                     backgroundColor: [
                         "rgba(103, 0, 221, 1)",
-                        "rgba(199, 199, 199, 1)"
+                        secondary_col_2
                     ]
                 },
             ]

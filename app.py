@@ -3,7 +3,7 @@ import json
 import asyncio
 from miner_data import MinerList, BOSminer
 import uvicorn
-
+from sanic import Sanic, response
 
 miner_list = MinerList(BOSminer("192.168.1.11"),
                        BOSminer("192.168.1.12"),
@@ -17,10 +17,18 @@ miner_data = miner_list.basic_data()
 running = True
 
 
-sio = socketio.AsyncServer(async_mode="asgi")
-app = socketio.ASGIApp(sio, static_files={
-    "/": "./public/"
-})
+app = Sanic("App")
+
+app.static('/', "./public/index.html")
+app.static('/sio_events.js', "./public/sio_events.js")
+app.static('/sio.js', "./public/sio.js")
+app.static('/graph_options.js', "./public/graph_options.js")
+app.static('/generate_graphs.js', "./public/generate_graphs.js")
+app.static('/create_layout.js', "./public/create_layout.js")
+
+
+sio = socketio.AsyncServer(async_mode="sanic")
+sio.attach(app)
 
 
 async def cb(data):
@@ -95,7 +103,8 @@ async def run() -> None:
         await sio.sleep(5)
 
 
-sio.start_background_task(run)
+app.add_task(run)
 
 if __name__ == '__main__':
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, log_level="info", reload=True)
+    app.run(host="0.0.0.0", port=8000, debug=True)
+    # uvicorn.run("app:app", host="127.0.0.1", port=8000, log_level="info", reload=True)

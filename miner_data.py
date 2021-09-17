@@ -16,6 +16,7 @@ CONFIG_FILE = os.path.join(os.getcwd(), "files", "config.toml")
 
 class BOSminer:
     def __init__(self, ip: str):
+        self.main_state = "start"
         self.stats = None
         self.ip = ip
         self.api_port = 4028
@@ -312,10 +313,8 @@ class BOSminer:
         self.add_to_output(f"Sending directory to {self.ip}...")
         # get/create ssh connection to miner
         conn = await self.get_connection("root", "admin")
-        # create sftp client using ssh connection
-        async with conn.start_sftp_client() as sftp:
-            # send a file over sftp
-            await sftp.put(l_dir, remotepath=r_dest, recurse=True)
+        # send the file
+        await asyncssh.scp(l_dir, (conn, r_dest), preserve=True, recurse=True)
         # tell the user the file was sent to the miner
         self.add_to_output(f"Directory sent...")
 
@@ -328,7 +327,7 @@ class BOSminer:
             self.add_to_output("Paused...")
         await self.running.wait()
 
-        # cget/create ssh connection to miner
+        # get/create ssh connection to miner
         conn = await self.get_connection("root", "admin")
         # send file over scp
         await asyncssh.scp(l_file, (conn, r_dest))
@@ -347,10 +346,8 @@ class BOSminer:
         self.add_to_output(f"Copying file from {self.ip}...")
         # create ssh connection to miner
         conn = await self.get_connection("root", "admin")
-        # create sftp client using ssh connection
-        async with conn.start_sftp_client() as sftp:
-            # copy a file over sftp
-            await sftp.get(r_file, localpath=l_dest)
+        # get the file
+        await asyncssh.scp((conn, r_file), l_dest)
         # tell the user we copied the file from the miner
         self.add_to_output(f"File copied...")
 
@@ -369,8 +366,9 @@ class BOSminer:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE)
         # get stdout of the unlock
-        stdout, _ = await proc.communicate()
+        stdout, stderr = await proc.communicate()
         # check if the webUI password needs to be reset
+        print(stderr)
         if str(stdout).find("webUI") != -1:
             # tell the user to reset the webUI password
             self.add_to_output("SSH unlock failed, please reset miner with reset button...")
@@ -396,13 +394,10 @@ class BOSminer:
                 # tell the user we are sending the referral
                 self.add_to_output("Sending referral IPK...")
                 # create ssh connection to miner
-                conn = await self.get_connection("root", "admin")
-                # create sftp client using ssh connection
                 await self.send_file(REFERRAL_FILE_S9, '/tmp/referral.ipk')
                 await self.send_file(CONFIG_FILE, '/etc/bosminer.toml')
 
-                result = await conn.run(f'opkg install /tmp/referral.ipk && /etc/init.d/bosminer restart')
-                self.add_to_output(result.stdout.strip())
+                await self.run_command(f'opkg install /tmp/referral.ipk && /etc/init.d/bosminer restart')
                 # tell the user the referral completed
                 self.add_to_output(f"Referral configuration completed...")
             except OSError:
@@ -534,13 +529,11 @@ class BOSminer:
         """
         Main run loop for the testing process of the miner
         """
-        # set state to return to
-        main_state = "start"
         # start the main loop
         while True:
             await asyncio.sleep(3)
             # check state
-            if main_state == "start":
+            if self.main_state == "start":
                 # Check for http
                 if await self.ping_http():
                     # check for ssh if http works
@@ -551,13 +544,13 @@ class BOSminer:
                         if await self.get_version() == "BOS+":
                             self.add_to_output('BraiinsOS+ is already installed!')
                             # set state to update BraiinsOS, skip install
-                            main_state = "update"
+                            self.main_state = "update"
                             # restart the while loop just to be safe
                             continue
                         else:
                             # if BraiinsOS is not installed but ssh is up, move on to installing it over ssh
                             await asyncio.sleep(5)
-                            main_state = "install"
+                            self.main_state = "install"
                     else:
                         # miner is on but has no ssh, needs to be unlocked
                         self.add_to_output('SSH Disconnected...')
@@ -565,49 +558,55 @@ class BOSminer:
                         # do the unlock
                         if await self.ssh_unlock():
                             # set state to install now that ssh works, ssh_unlock returns True when unlock works
-                            main_state = "install"
+                            self.main_state = "install"
+                            # pause for a second to bypass bugs
+                            await asyncio.sleep(5)
                             # restart the while loop just to be safe
                             continue
                         else:
                             # if ssh unlock fails, it needs to be reset, ssh_unlock will tell the user that and return false, so wait for disconnect
                             await self.wait_for_disconnect()
                             # set state to start to retry after reset
-                            main_state = "start"
+                            self.main_state = "start"
                             # restart the while loop just to be safe
                             continue
                 else:
                     # if no http or ssh are present, the miner is off or not ready
                     self.add_to_output("Down...")
             # check state
-            if main_state == "install":
+            if self.main_state == "install":
                 # let the user know we are starting install
                 self.add_to_output('Starting install...')
                 # start install
-                await self.install()
+                try:
+                    await self.install()
+                except:
+                    self.main_state = "start"
+                    continue
                 # after install completes, move to sending referral
-                main_state = "referral"
+                self.main_state = "referral"
             # check state
-            if main_state == "update":
+            if self.main_state == "update":
                 # start update
                 await self.update()
                 # after update completes, move to sending referral
                 await asyncio.sleep(20)
-                main_state = "referral"
+                self.main_state = "referral"
             # check state
-            if main_state == "referral":
+            if self.main_state == "referral":
                 await asyncio.sleep(5)
                 # send the referral file, install it, and configure using config.toml
                 await self.send_referral()
                 # set state to done to wait for disconnect
-                main_state = "done"
+                self.main_state = "done"
             # check state
-            if main_state == "done":
+            if self.main_state == "done":
                 # wait for the user to disconnect the miner
                 self.bos.set()
                 await self.wait_for_disconnect()
                 # set state to start and restart the process
                 self.bos.clear()
-                main_state = "start"
+                self.main_state = "start"
                 # restart main loop
                 continue
 
@@ -668,5 +667,5 @@ class MinerList:
 
     async def install(self) -> None:
         """Run the install on all miners"""
-        tasks = [self.miners[miner].main_loop() for miner in self.miners]
+        tasks = [asyncio.create_task(self.miners[miner].main_loop()) for miner in self.miners]
         await asyncio.gather(*tasks)
