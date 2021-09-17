@@ -2,8 +2,7 @@ import socketio
 import json
 import asyncio
 from miner_data import MinerList, BOSminer
-import uvicorn
-from sanic import Sanic, response
+from sanic import Sanic
 
 miner_list = MinerList(BOSminer("192.168.1.11"),
                        BOSminer("192.168.1.12"),
@@ -16,7 +15,6 @@ miner_list = MinerList(BOSminer("192.168.1.11"),
 miner_data = miner_list.basic_data()
 running = True
 
-
 app = Sanic("App")
 
 app.static('/', "./public/index.html")
@@ -26,7 +24,6 @@ app.static('/graph_options.js', "./public/graph_options.js")
 app.static('/generate_graphs.js', "./public/generate_graphs.js")
 app.static('/create_layout.js', "./public/create_layout.js")
 
-
 sio = socketio.AsyncServer(async_mode="sanic")
 sio.attach(app)
 
@@ -35,9 +32,11 @@ async def cb(data):
     """Callback to print data from client"""
     print(data)
 
+
 async def send_install_data(data):
     """Send install data to all clients"""
     await sio.emit('install_data', json.dumps(data), callback=cb)
+
 
 async def send_data(data):
     """Send miner data to all clients"""

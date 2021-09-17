@@ -101,7 +101,7 @@ class BOSminer:
             await self.running.wait()
             await asyncio.sleep(1)
 
-    async def get_version(self) -> str:
+    async def get_version(self) -> str or bool:
         """
         Get the version of the miner
         """
@@ -219,7 +219,7 @@ class BOSminer:
         Create a new asyncssh connection
         """
         conn = await asyncssh.connect(self.ip, known_hosts=None, username=username, password=password,
-                                          server_host_key_algs=['ssh-rsa'])
+                                      server_host_key_algs=['ssh-rsa'])
         # return created connection
         return conn
 
@@ -566,7 +566,8 @@ class BOSminer:
                             # restart the while loop just to be safe
                             continue
                         else:
-                            # if ssh unlock fails, it needs to be reset, ssh_unlock will tell the user that and return false, so wait for disconnect
+                            # if ssh unlock fails, it needs to be reset, ssh_unlock will tell the user that and
+                            # return false, so wait for disconnect
                             await self.wait_for_disconnect()
                             # set state to start to retry after reset
                             self.main_state = "start"
