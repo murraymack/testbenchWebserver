@@ -229,23 +229,28 @@ class BOSminer:
         if not self.running.is_set():
             self.add_to_output("Paused...")
         await self.running.wait()
-
+        result = None
         # get/create ssh connection to miner
         conn = await self.get_connection("root", "admin")
         # send the command and store the result
-        try:
-            result = await conn.run(cmd)
-        except:
-            result = await conn.run(cmd)
+        for i in range(3):
+            try:
+                result = await conn.run(cmd)
+            except:
+                if i == 3:
+                    self.add_to_output(f"Unknown error when running the command {cmd}...")
+                    return
+                pass
         # let the user know the result of the command
-        if result.stdout != "":
-            self.add_to_output(result.stdout)
-            if result.stderr != "":
+        if result is not None:
+            if result.stdout != "":
+                self.add_to_output(result.stdout)
+                if result.stderr != "":
+                    self.add_to_output("ERROR: " + result.stderr)
+            elif result.stderr != "":
                 self.add_to_output("ERROR: " + result.stderr)
-        elif result.stderr != "":
-            self.add_to_output("ERROR: " + result.stderr)
-        else:
-            self.add_to_output(cmd)
+            else:
+                self.add_to_output(cmd)
 
     async def get_api_data(self) -> dict:
         """Get and parse API data for the client"""
