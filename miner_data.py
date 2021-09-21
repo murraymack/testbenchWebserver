@@ -572,7 +572,7 @@ class BOSminer:
                         elif version == "New":
                             self.add_to_output('BraiinsOS+ is on the newest version!')
                             # set state to complete, skip install and update
-                            self.main_state = "done"
+                            self.main_state = "referral"
                         else:
                             # if BraiinsOS is not installed but ssh is up, move on to installing it over ssh
                             await asyncio.sleep(5)
