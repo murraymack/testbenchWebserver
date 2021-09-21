@@ -167,6 +167,9 @@ class BOSminer:
                 if retries > 3:
                     self.add_to_output('Connection refused, attempting install...')
                     return "Antminer"
+            except:
+                self.add_to_output("Unknown error getting version, attepting install...")
+                return "Antminer"
 
     async def send_api_cmd(self, command: str) -> dict or None:
         """Send a command to the API of the miner"""
