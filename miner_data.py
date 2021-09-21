@@ -12,6 +12,7 @@ FW_PRINTENV_S9 = os.path.join(os.getcwd(), "files", "system", "fw_printenv")
 FIRMWARE_PATH_S9 = os.path.join(os.getcwd(), "files", "firmware")
 UPDATE_FILE_S9 = os.path.join(os.getcwd(), "files", "update.tar")
 CONFIG_FILE = os.path.join(os.getcwd(), "files", "config.toml")
+NEWEST_VERSION = "21.04"
 
 
 class BOSminer:
@@ -136,7 +137,21 @@ class BOSminer:
                 # tell the user the version of the miner
                 self.add_to_output(f'Version is {data_dict["VERSION"][0][list(data_dict["VERSION"][0].keys())[1]]}...')
                 if "BOSminer+" in data_dict["VERSION"][0].keys() or "BOSminer" in data_dict["VERSION"][0].keys():
-                    return "BOS+"
+                    # get/create ssh connection to miner
+                    conn = await self.get_connection("root", "admin")
+                    # send the command and store the result
+                    try:
+                        result = await conn.run("cat /etc/bos_version")
+                        version_base = result.stdout
+                        version_base = version_base.strip()
+                        version_base = version_base.split("-")
+                        version = version_base[-2]
+                        if version == NEWEST_VERSION:
+                            return "New"
+                        else:
+                            return "BOS+"
+                    except:
+                        return "BOS+"
                 else:
                     return "Antminer"
             except asyncio.exceptions.TimeoutError:
@@ -543,12 +558,16 @@ class BOSminer:
                         # if both ssh and http are up, the miner is on and unlocked
                         self.add_to_output('SSH Connected...')
                         # check if BraiinsOS is already on the miner
-                        if await self.get_version() == "BOS+":
+                        if (version := await self.get_version()) == "BOS+":
                             self.add_to_output('BraiinsOS+ is already installed!')
                             # set state to update BraiinsOS, skip install
                             self.main_state = "update"
                             # restart the while loop just to be safe
                             continue
+                        elif version == "New":
+                            self.add_to_output('BraiinsOS+ is on the newest version!')
+                            # set state to complete, skip install and update
+                            self.main_state = "done"
                         else:
                             # if BraiinsOS is not installed but ssh is up, move on to installing it over ssh
                             await asyncio.sleep(5)
@@ -674,3 +693,8 @@ class MinerList:
         """Run the install on all miners"""
         tasks = [asyncio.create_task(self.miners[miner].main_loop()) for miner in self.miners]
         await asyncio.gather(*tasks)
+
+
+if __name__ == '__main__':
+    miner_ = BOSminer("172.16.1.18")
+    asyncio.get_event_loop().run_until_complete(miner_.get_version())
