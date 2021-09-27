@@ -168,7 +168,7 @@ class BOSminer:
                     self.add_to_output('Connection refused, attempting install...')
                     return "Antminer"
             except:
-                self.add_to_output("Unknown error getting version, attepting install...")
+                self.add_to_output("Unknown error getting version, attempting install...")
                 return "Antminer"
 
     async def send_api_cmd(self, command: str) -> dict or None:
