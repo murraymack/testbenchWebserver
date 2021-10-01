@@ -167,6 +167,7 @@ class BOSminer:
                 if retries > 3:
                     self.add_to_output('Connection refused, attempting install...')
                     return "Antminer"
+                await asyncio.sleep(3)
             except:
                 self.add_to_output("Unknown error getting version, attempting install...")
                 return "Antminer"
@@ -402,6 +403,7 @@ class BOSminer:
         else:
             # tell the user the SSH unlock worked
             self.add_to_output("SSH unlock success...")
+            await asyncio.sleep(3)
             # ssh is unlocked
             return True
 
@@ -425,7 +427,8 @@ class BOSminer:
                 await self.run_command(f'opkg install /tmp/referral.ipk && /etc/init.d/bosminer restart')
                 # tell the user the referral completed
                 self.add_to_output(f"Referral configuration completed...")
-            except OSError:
+            except OSError as e:
+                print(e)
                 self.add_to_output(f"Unknown error...")
         else:
             self.add_to_output("No referral file, skipping referral install")
@@ -460,18 +463,21 @@ class BOSminer:
         """
         Run the braiinsOS installation process on the miner
         """
-        self.add_to_output("Starting install, please wait...")
         proc = await asyncio.create_subprocess_shell(
-            f'{os.path.join(os.getcwd(), "files", "bos-toolbox", "bos-toolbox.bat")} {self.ip} --pool-user UpstreamDataInc.test --no-keep-pools --psu-power-limit 900 --no-nand-backup --feeds-url file:./feeds/',
+            f'{os.path.join(os.getcwd(), "files", "bos-toolbox", "bos-toolbox.bat")} install {self.ip} --pool-user UpstreamDataInc.test --no-keep-pools --psu-power-limit 900 --no-nand-backup --feeds-url file:./feeds/',
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE)
         # get stdout of the install
-        stdout, stderr = await proc.communicate()
-        self.add_to_output(stdout)
-        if stderr:
-            self.add_to_output(stderr)
-            print(stderr)
-
+        while True:
+            # stderr = await proc.stderr.readuntil(b'\r')
+            stdout = await proc.stderr.readuntil(b'\r')
+            if stdout == b'':
+                break
+            # self.add_to_output(stderr.decode("utf-8").strip())
+            self.add_to_output(stdout.decode("utf-8").strip())
+        self.add_to_output("Rebooting...")
+        await proc.wait()
+        self.add_to_output("Install complete...")
         while not await self.ping_http():
             await asyncio.sleep(3)
         await asyncio.sleep(5)
@@ -536,7 +542,10 @@ class BOSminer:
                 # start install
                 try:
                     await self.install()
-                except:
+                except asyncio.exceptions.IncompleteReadError:
+                    pass
+                except Exception as e:
+                    print(e)
                     self.main_state = "start"
                     continue
                 # after install completes, move to sending referral
@@ -553,6 +562,7 @@ class BOSminer:
                 await asyncio.sleep(5)
                 # send the referral file, install it, and configure using config.toml
                 await self.send_referral()
+                await asyncio.sleep(5)
                 # set state to done to wait for disconnect
                 self.main_state = "done"
             # check state
@@ -630,5 +640,5 @@ class MinerList:
 
 
 if __name__ == '__main__':
-    miner_ = BOSminer("172.16.1.18")
-    asyncio.get_event_loop().run_until_complete(miner_.get_version())
+    miner_ = BOSminer("192.168.1.17")
+    asyncio.get_event_loop().run_until_complete(miner_.install())
