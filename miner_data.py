@@ -460,92 +460,18 @@ class BOSminer:
         """
         Run the braiinsOS installation process on the miner
         """
-        # pause logic
-        if not self.running.is_set():
-            self.add_to_output("Paused...")
-        await self.running.wait()
-        # remove temp firmware directory, making sure its empty
-        await self.run_command("rm -fr /tmp/firmware")
-        # recreate temp firmware directory
-        await self.run_command("mkdir -p /tmp/firmware")
+        self.add_to_output("Starting install, please wait...")
+        proc = await asyncio.create_subprocess_shell(
+            f'{os.path.join(os.getcwd(), "files", "bos-toolbox", "bos-toolbox.bat")} {self.ip} --pool-user UpstreamDataInc.test --no-keep-pools --psu-power-limit 900 --no-nand-backup --feeds-url file:./feeds/',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE)
+        # get stdout of the install
+        stdout, stderr = await proc.communicate()
+        self.add_to_output(stdout)
+        if stderr:
+            self.add_to_output(stderr)
+            print(stderr)
 
-        # pause logic
-        if not self.running.is_set():
-            self.add_to_output("Paused...")
-        await self.running.wait()
-        # ensure lib exists
-        await self.run_command("mkdir -p /lib")
-        # copy ld-musl-armhf.so.1 to lib
-        await self.send_file(LIB_FILE_S9, "/lib/ld-musl-armhf.so.1")
-        # add execute permissions to /lib/ld-musl-armhf.so.1
-        await self.run_command("chmod +x /lib/ld-musl-armhf.so.1")
-
-        # pause logic
-        if not self.running.is_set():
-            self.add_to_output("Paused...")
-        await self.running.wait()
-        # create openssh directory in /usr/lib/openssh
-        await self.run_command("mkdir -p /usr/lib/openssh")
-        # copy sftp-server to /usr/lib/openssh/sftp-server
-        await self.send_file(SFTP_SERVER_S9, "/usr/lib/openssh/sftp-server")
-        # add execute permissions to /usr/lib/openssh/sftp-server
-        await self.run_command("chmod +x /usr/lib/openssh/sftp-server")
-
-        # pause logic
-        if not self.running.is_set():
-            self.add_to_output("Paused...")
-        await self.running.wait()
-        # ensure /usr/sbin exists
-        await self.run_command("mkdir -p /usr/sbin")
-        # copy fw_printenv to /usr/sbin/fw_printenv
-        await self.send_file(FW_PRINTENV_S9, "/usr/sbin/fw_printenv")
-        # add execute permissions to /usr/sbin/fw_printenv
-        await self.run_command("chmod +x /usr/sbin/fw_printenv")
-
-        # pause logic
-        if not self.running.is_set():
-            self.add_to_output("Paused...")
-        await self.running.wait()
-        # copy over firmware files to /tmp/firmware
-        await self.send_dir(FIRMWARE_PATH_S9, "/tmp")
-        # add execute permissions to firmware stage 1
-        await self.run_command("chmod +x /tmp/firmware/stage1.sh")
-
-        # pause logic
-        if not self.running.is_set():
-            self.add_to_output("Paused...")
-        await self.running.wait()
-        await self.run_command("ln -fs /usr/sbin/fw_printenv /usr/sbin/fw_setenv")
-
-        # pause logic
-        if not self.running.is_set():
-            self.add_to_output("Paused...")
-        await self.running.wait()
-        # generate random HWID to be used in install
-        hwid = base64.b64encode(os.urandom(12), b'ab').decode('ascii')
-        # generate install command
-        install_cmd = f"cd /tmp/firmware && ls -l && /bin/sh stage1.sh \
-        '{hwid}' \
-        'UpstreamDataInc.test' \
-        '900' \
-        'yes' \
-        'cond' \
-        'no' \
-        'no' \
-        'no'"
-
-        # run the install
-        await self.run_command(f"{install_cmd} && /sbin/reboot")
-        # wait 120 seconds for reboot
-        self.add_to_output('Rebooting...')
-        await asyncio.sleep(20)
-        self.add_to_output("25% Complete...")
-        await asyncio.sleep(20)
-        self.add_to_output("50% Complete...")
-        await asyncio.sleep(20)
-        self.add_to_output("75% Complete...")
-        await asyncio.sleep(20)
-        self.add_to_output("Reboot Complete...")
         while not await self.ping_http():
             await asyncio.sleep(3)
         await asyncio.sleep(5)

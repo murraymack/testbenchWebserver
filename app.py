@@ -106,4 +106,3 @@ app.add_task(run)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=80)
-    # uvicorn.run("app:app", host="127.0.0.1", port=8000, log_level="info", reload=True)
