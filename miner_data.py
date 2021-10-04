@@ -274,6 +274,7 @@ class BOSminer:
     async def get_api_data(self) -> dict:
         """Get and parse API data for the client"""
         if not self.bos.is_set():
+            self.lit = False
             return self.messages
         try:
             # get all data and split it up

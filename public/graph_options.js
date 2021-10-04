@@ -1,6 +1,9 @@
 // All options for creation of graphs in ./generate_graphs.js
 
 export var options_hr = {
+    animation: {
+        duration: 0,
+    },
     responsive: true,
     aspectRatio: .75,
     plugins: {
@@ -29,6 +32,9 @@ export var options_hr = {
 };
 
 export var options_temp = {
+    animation: {
+        duration: 0,
+    },
     responsive: true,
     plugins: {
         legend: {
@@ -39,6 +45,9 @@ export var options_temp = {
 };
 
 export var options_fans = {
+    animation: {
+        duration: 0,
+    },
     aspectRatio: 1.5,
     events: [],
     responsive: true,
