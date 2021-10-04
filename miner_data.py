@@ -1,7 +1,6 @@
 import asyncio
 import json
 import asyncssh
-import base64
 import os
 
 # define constants such as the BraiinsOS package to be installed, the update tar file, and the referral ipk
@@ -17,14 +16,22 @@ NEWEST_VERSION = "21.04"
 
 class BOSminer:
     def __init__(self, ip: str):
+        # install state to track what has been done
         self.main_state = "start"
+        # miner data that gets sent to the webserver
         self.stats = None
+        # miner IP address
         self.ip = ip
+        # API port
         self.api_port = 4028
+        # pause option for the webserver client
         self.running = asyncio.Event()
         self.running.set()
+        # braiinsOS notifier
         self.bos = asyncio.Event()
+        # fault light option
         self.lit = False
+        # text data from the installer
         self.messages = {"IP": self.ip, "text": ""}
 
     async def ping(self, port: int) -> bool:
@@ -234,9 +241,7 @@ class BOSminer:
         self.messages["text"] = text
 
     async def get_connection(self, username: str, password: str) -> asyncssh.connect:
-        """
-        Create a new asyncssh connection
-        """
+        """Create a new asyncssh connection"""
         conn = await asyncssh.connect(self.ip, known_hosts=None, username=username, password=password,
                                       server_host_key_algs=['ssh-rsa'])
         # return created connection
@@ -335,13 +340,13 @@ class BOSminer:
             self.add_to_output("Paused...")
         await self.running.wait()
 
-        # tell the user we are sending a file to the miner
+        # tell the user we are sending a directory to the miner
         self.add_to_output(f"Sending directory to {self.ip}...")
         # get/create ssh connection to miner
         conn = await self.get_connection("root", "admin")
         # send the file
         await asyncssh.scp(l_dir, (conn, r_dest), preserve=True, recurse=True)
-        # tell the user the file was sent to the miner
+        # tell the user the directory was sent to the miner
         self.add_to_output(f"Directory sent...")
 
     async def send_file(self, l_file: str, r_dest: str) -> None:
@@ -463,6 +468,8 @@ class BOSminer:
         """
         Run the braiinsOS installation process on the miner
         """
+        self.add_to_output("Starting install, please wait...")
+        # outsource installer process
         proc = await asyncio.create_subprocess_shell(
             f'{os.path.join(os.getcwd(), "files", "bos-toolbox", "bos-toolbox.bat")} install {self.ip} --pool-user UpstreamDataInc.test --no-keep-pools --psu-power-limit 900 --no-nand-backup --feeds-url file:./feeds/',
             stdout=asyncio.subprocess.PIPE,
@@ -640,5 +647,5 @@ class MinerList:
 
 
 if __name__ == '__main__':
-    miner_ = BOSminer("192.168.1.17")
-    asyncio.get_event_loop().run_until_complete(miner_.install())
+    miner_ = BOSminer("172.16.1.18")
+    asyncio.get_event_loop().run_until_complete(miner_.get_version())
