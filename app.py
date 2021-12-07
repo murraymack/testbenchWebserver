@@ -1,33 +1,10 @@
 import socketio
 import json
 import asyncio
-from miner_data import MinerList, BOSminer
+from miner_data import MinerList, Miner
 from sanic import Sanic
 
-miner_list = MinerList(BOSminer("192.168.1.11"),
-                       BOSminer("192.168.1.12"),
-                       BOSminer("192.168.1.13"),
-                       BOSminer("192.168.1.14"),
-                       BOSminer("192.168.1.15"),
-                       BOSminer("192.168.1.16"),
-                       BOSminer("192.168.1.17"),
-                       BOSminer("192.168.1.18"),
-                       BOSminer("192.168.1.19"),
-                       BOSminer("192.168.1.20"),
-                       BOSminer("192.168.1.21"),
-                       BOSminer("192.168.1.22"),
-                       BOSminer("192.168.1.23"),
-                       BOSminer("192.168.1.24"),
-                       BOSminer("192.168.1.25"),
-                       BOSminer("192.168.1.26"),
-                       BOSminer("192.168.1.27"),
-                       BOSminer("192.168.1.28"),
-                       BOSminer("192.168.1.29"),
-                       BOSminer("192.168.1.30"),
-                       BOSminer("192.168.1.31"),
-                       BOSminer("192.168.1.32"),
-                       BOSminer("192.168.1.33"),
-                       BOSminer("192.168.1.34"))
+miner_list = MinerList(Miner("192.168.1.249"))
 
 # set basic data for initialization of the web server
 miner_data = miner_list.basic_data()
@@ -46,7 +23,6 @@ app.static('/create_layout.js', "./public/create_layout.js")
 # attach socketio
 sio = socketio.AsyncServer(async_mode="sanic")
 sio.attach(app)
-
 
 async def cb(data):
     """Callback to print data from client"""
@@ -130,4 +106,4 @@ app.add_task(run)
 
 if __name__ == '__main__':
     # app.run for running the sanic app inside the file
-    app.run(host="0.0.0.0", port=80)
+    app.run(host="0.0.0.0", port=80, debug=False)

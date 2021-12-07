@@ -3,18 +3,14 @@ import json
 import asyncssh
 import os
 
-# define constants such as the BraiinsOS package to be installed, the update tar file, and the referral ipk
-REFERRAL_FILE_S9 = os.path.join("files", "referral.ipk")
-LIB_FILE_S9 = os.path.join(os.getcwd(), "files", "system", "ld-musl-armhf.so.1")
-SFTP_SERVER_S9 = os.path.join(os.getcwd(), "files", "system", "sftp-server")
-FW_PRINTENV_S9 = os.path.join(os.getcwd(), "files", "system", "fw_printenv")
-FIRMWARE_PATH_S9 = os.path.join(os.getcwd(), "files", "firmware")
-UPDATE_FILE_S9 = os.path.join(os.getcwd(), "files", "update.tar")
-CONFIG_FILE = os.path.join(os.getcwd(), "files", "config.toml")
-NEWEST_VERSION = "21.04"
+# file path for firmware tarball
+fw_file = None
+for file in os.listdir(os.path.join(os.getcwd(), "files")):
+    if file.endswith(".tar.gz"):
+        fw_file = os.path.join(os.getcwd(), "files", file)
+        print(fw_file)
 
-
-class BOSminer:
+class Miner:
     def __init__(self, ip: str):
         # install state to track what has been done
         self.main_state = "start"
@@ -27,8 +23,8 @@ class BOSminer:
         # pause option for the webserver client
         self.running = asyncio.Event()
         self.running.set()
-        # braiinsOS notifier
-        self.bos = asyncio.Event()
+        # HiveOS notifier
+        self.firmware = asyncio.Event()
         # fault light option
         self.lit = False
         # text data from the installer
@@ -143,24 +139,10 @@ class BOSminer:
                 data_dict = json.loads(data[:-1].decode('utf-8'))
                 # tell the user the version of the miner
                 self.add_to_output(f'Version is {data_dict["VERSION"][0][list(data_dict["VERSION"][0].keys())[1]]}...')
+                # TODO: change version checking to HIVEOS
                 if "BOSminer+" in data_dict["VERSION"][0].keys() or "BOSminer" in data_dict["VERSION"][0].keys():
-                    # get/create ssh connection to miner
-                    conn = await self.get_connection("root", "admin")
-                    # send the command and store the result
-                    try:
-                        result = await conn.run("cat /etc/bos_version")
-                        version_base = result.stdout
-                        version_base = version_base.strip()
-                        version_base = version_base.split("-")
-                        version = version_base[-2]
-                        if version == NEWEST_VERSION:
-                            return "New"
-                        else:
-                            return "BOS+"
-                    except:
-                        return "BOS+"
-                else:
-                    return "Antminer"
+                    print("HIVE")
+
             except asyncio.exceptions.TimeoutError:
                 # we have no version, the connection timed out
                 self.add_to_output("Get version failed...")
@@ -227,13 +209,15 @@ class BOSminer:
     async def light(self) -> None:
         """Turn on the fault light"""
         self.lit = True
-        await self.run_command("miner fault_light on")
+        # TODO: find light function for HIVEOS
+        # await self.run_command("miner fault_light on")
         print("light " + self.ip)
 
     async def unlight(self) -> None:
         """Turn off the fault light"""
         self.lit = False
-        await self.run_command("miner fault_light off")
+        # TODO: find light function for HIVEOS
+        # await self.run_command("miner fault_light off")
         print("unlight" + self.ip)
 
     def add_to_output(self, message: str) -> None:
@@ -277,31 +261,34 @@ class BOSminer:
                 self.add_to_output(cmd)
 
     async def get_api_data(self) -> dict:
+        # This is only needed for the firmware after install
         """Get and parse API data for the client"""
-        if not self.bos.is_set():
+        if not self.firmware.is_set():
             self.lit = False
             return self.messages
         try:
             # get all data and split it up
             all_data = await self.send_api_cmd("devs+temps+fans")
             devs_raw = all_data['devs'][0]
-            temps_raw = all_data['temps'][0]
-            fans_raw = all_data['fans'][0]
+            # TODO: find BMMiner command to get temps and fan data -> ONLY FOR HIVE OS, dont need standard
+            # temps_raw = all_data['temps'][0]
+            # fans_raw = all_data['fans'][0]
 
             # parse temperature data
-            temps_data = {}
-            for board in range(len(temps_raw['TEMPS'])):
-                temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"] = {}
-                temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Board"] = temps_raw['TEMPS'][board]['Board']
-                temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Chip"] = temps_raw['TEMPS'][board]['Chip']
+            # temps_data = {}
+            # for board in range(len(temps_raw['TEMPS'])):
+            #     temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"] = {}
+            #     temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Board"] = temps_raw['TEMPS'][board]['Board']
+            #     temps_data[f"board_{temps_raw['TEMPS'][board]['ID']}"]["Chip"] = temps_raw['TEMPS'][board]['Chip']
 
             # parse individual board and chip temperature data
-            for board in temps_data.keys():
-                if "Board" not in temps_data[board].keys():
-                    temps_data[board]["Board"] = 0
-                if "Chip" not in temps_data[board].keys():
-                    temps_data[board]["Chip"] = 0
+            # for board in temps_data.keys():
+            #     if "Board" not in temps_data[board].keys():
+            #         temps_data[board]["Board"] = 0
+            #     if "Chip" not in temps_data[board].keys():
+            #         temps_data[board]["Chip"] = 0
 
+            # TODO: make sure MHS works, if not add GHS
             # parse hashrate data
             hr_data = {}
             for board in range(len(devs_raw['DEVS'])):
@@ -311,13 +298,14 @@ class BOSminer:
                     2)
 
             # parse fan data
-            fans_data = {}
-            for fan in range(len(fans_raw['FANS'])):
-                fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"] = {}
-                fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"]['RPM'] = fans_raw['FANS'][fan]['RPM']
+            # fans_data = {}
+            # for fan in range(len(fans_raw['FANS'])):
+            #     fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"] = {}
+            #     fans_data[f"fan_{fans_raw['FANS'][fan]['ID']}"]['RPM'] = fans_raw['FANS'][fan]['RPM']
 
             # set the miner data
-            miner_data = {'IP': self.ip, "Light": "show", 'Fans': fans_data, 'HR': hr_data, 'Temps': temps_data}
+            miner_data = {'IP': self.ip, "Light": "show"}
+            # , 'Fans': fans_data, 'HR': hr_data, 'Temps': temps_data}
 
             # save stats for later
             self.stats = miner_data
@@ -413,32 +401,6 @@ class BOSminer:
             # ssh is unlocked
             return True
 
-    async def send_referral(self) -> None:
-        """
-        Send the referral IPK to a miner
-        """
-        # pause logic
-        if not self.running.is_set():
-            self.add_to_output("Paused...")
-        await self.running.wait()
-        # check if the referral file exists
-        if os.path.exists(REFERRAL_FILE_S9):
-            try:
-                # tell the user we are sending the referral
-                self.add_to_output("Sending referral IPK...")
-                # create ssh connection to miner
-                await self.send_file(REFERRAL_FILE_S9, '/tmp/referral.ipk')
-                await self.send_file(CONFIG_FILE, '/etc/bosminer.toml')
-
-                await self.run_command(f'opkg install /tmp/referral.ipk && /etc/init.d/bosminer restart')
-                # tell the user the referral completed
-                self.add_to_output(f"Referral configuration completed...")
-            except OSError as e:
-                print(e)
-                self.add_to_output(f"Unknown error...")
-        else:
-            self.add_to_output("No referral file, skipping referral install")
-
     async def update(self) -> None:
         """
         Run the update process on the miner
@@ -452,16 +414,8 @@ class BOSminer:
         self.add_to_output(f"Updating...")
         # create ssh connection to miner
         try:
-            conn = await self.get_connection("root", "admin")
-            # tell the user we are sending the update file
-            self.add_to_output("Sending upgrade file...")
-            # send the update file
-            await self.send_file(UPDATE_FILE_S9, "/tmp/firmware.tar")
-            # install the update and collect the result
-            result = await conn.run(f'sysupgrade /tmp/firmware.tar')
-            self.add_to_output(result.stdout.strip())
-            # tell the user the update completed
-            self.add_to_output(f"Update completed...")
+            print(0)
+            # TODO: add possible alternate hive update process
         except OSError:
             self.add_to_output(f"Unknown error...")
 
@@ -471,24 +425,24 @@ class BOSminer:
         """
         self.add_to_output("Starting install, please wait...")
         # outsource installer process
+        # TODO: move to asicseer web install process?
+        global fw_file
         proc = await asyncio.create_subprocess_shell(
-            f'{os.path.join(os.getcwd(), "files", "bos-toolbox", "bos-toolbox.bat")} install {self.ip} --pool-user UpstreamDataInc.test --no-keep-pools --psu-power-limit 900 --no-nand-backup --feeds-url file:./feeds/',
+            f'{os.path.join(os.getcwd(), "files", "asicseer_installer.exe")} -t 3 -u {fw_file} {self.ip} root',
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE)
         # get stdout of the install
-        while True:
-            # stderr = await proc.stderr.readuntil(b'\r')
-            stdout = await proc.stderr.readuntil(b'\r')
-            if stdout == b'':
-                break
-            # self.add_to_output(stderr.decode("utf-8").strip())
-            self.add_to_output(stdout.decode("utf-8").strip())
+        stdout, stderr = await proc.communicate()
         self.add_to_output("Rebooting...")
-        await proc.wait()
-        self.add_to_output("Install complete...")
+        await asyncio.sleep(10)
         while not await self.ping_http():
             await asyncio.sleep(3)
         await asyncio.sleep(5)
+        while not await self.ping_http():
+            await asyncio.sleep(3)
+        await asyncio.sleep(5)
+        self.add_to_output("Install complete...")
+
 
     async def main_loop(self):
         """
@@ -506,16 +460,12 @@ class BOSminer:
                         # if both ssh and http are up, the miner is on and unlocked
                         self.add_to_output('SSH Connected...')
                         # check if BraiinsOS is already on the miner
-                        if (version := await self.get_version()) == "BOS+":
-                            self.add_to_output('BraiinsOS+ is already installed!')
-                            # set state to update BraiinsOS, skip install
+                        if (version := await self.get_version()) == "Hive":
+                            self.add_to_output('HiveOS is already installed!')
+                            # set state to update HiveOS, skip install
                             self.main_state = "update"
                             # restart the while loop just to be safe
                             continue
-                        elif version == "New":
-                            self.add_to_output('BraiinsOS+ is on the newest version!')
-                            # set state to complete, skip install and update
-                            self.main_state = "referral"
                         else:
                             # if BraiinsOS is not installed but ssh is up, move on to installing it over ssh
                             await asyncio.sleep(5)
@@ -550,36 +500,29 @@ class BOSminer:
                 # start install
                 try:
                     await self.install()
+                    self.main_state = "done"
                 except asyncio.exceptions.IncompleteReadError:
-                    pass
+                    print("Incomplete Read")
+                    self.add_to_output("Incomplete Read Error, waiting 60 seconds for install to complete.")
+                    await asyncio.sleep(70)
+                    self.main_state = "done"
                 except Exception as e:
                     print(e)
                     self.main_state = "start"
                     continue
-                # after install completes, move to sending referral
-                self.main_state = "referral"
             # check state
             if self.main_state == "update":
                 # start update
                 await self.update()
                 # after update completes, move to sending referral
                 await asyncio.sleep(20)
-                self.main_state = "referral"
-            # check state
-            if self.main_state == "referral":
-                await asyncio.sleep(5)
-                # send the referral file, install it, and configure using config.toml
-                await self.send_referral()
-                await asyncio.sleep(5)
-                # set state to done to wait for disconnect
-                self.main_state = "done"
             # check state
             if self.main_state == "done":
                 # wait for the user to disconnect the miner
-                self.bos.set()
+                self.firmware.set()
                 await self.wait_for_disconnect()
                 # set state to start and restart the process
-                self.bos.clear()
+                self.firmware.clear()
                 if "Light" in self.messages.keys():
                     del self.messages["Light"]
                 self.main_state = "start"
@@ -588,7 +531,7 @@ class BOSminer:
 
 
 class MinerList:
-    def __init__(self, *items: BOSminer):
+    def __init__(self, *items: Miner):
         self.miners = {}
         for item in items:
             self.miners[item.ip] = item
@@ -630,7 +573,7 @@ class MinerList:
         miner = self.miners[ip]
         return miner.lit
 
-    def append(self, *items: BOSminer) -> None:
+    def append(self, *items: Miner) -> None:
         """Add a miner to MinerList"""
         for item in items:
             self.miners[item.ip] = item
@@ -648,5 +591,5 @@ class MinerList:
 
 
 if __name__ == '__main__':
-    miner_ = BOSminer("172.16.1.18")
+    miner_ = Miner("172.16.1.18")
     asyncio.get_event_loop().run_until_complete(miner_.get_version())
